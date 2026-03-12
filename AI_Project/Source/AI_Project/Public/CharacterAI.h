@@ -4,7 +4,9 @@
 #include "GameFramework/Character.h"
 #include "CharacterAI.generated.h"
 
+
 class UAnimMontage;
+class UBehaviorTree;
 
 UCLASS()
 class AI_PROJECT_API ACharacterAI : public ACharacter
@@ -12,37 +14,43 @@ class AI_PROJECT_API ACharacterAI : public ACharacter
     GENERATED_BODY()
 
 public:
-    // Sets default values
     ACharacterAI();
 
 protected:
     virtual void BeginPlay() override;
 
 public:
-    virtual void Tick(float DeltaTime) override;
 
-    // Move to plauyer 
-    void MoveTowardsPlayer(AActor* PlayerActor);
+    // Behavior Tree reference
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    UBehaviorTree* BehaviorTreeAsset;
 
-    // attack
+    // Combat actions
+    UFUNCTION(BlueprintCallable)
     void Attack();
+
+    UFUNCTION(BlueprintCallable)
     void Block();
 
-    // movement speed
+    // Movement
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
     float MoveSpeed = 400.f;
 
-    // get the player reference
+    // Target
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     AActor* TargetPlayer;
 
-    // punch animation
+    // Animations
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     UAnimMontage* PunchMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     UAnimMontage* BlockMontage;
 
-	int health = 100;
-	int damage = 20;
+    // Stats
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    int Health = 100;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    int Damage = 20;
 };
