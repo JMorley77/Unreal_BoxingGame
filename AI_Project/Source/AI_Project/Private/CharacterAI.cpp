@@ -2,6 +2,9 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Animation/AnimInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 ACharacterAI::ACharacterAI()
 {
@@ -9,6 +12,10 @@ ACharacterAI::ACharacterAI()
 
     // set movement speed
     GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+
+    // create behavior tree components
+    BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComponent"));
+    BehaviorTreeComponent = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorTreeComponent"));
 }
 
 void ACharacterAI::BeginPlay()
@@ -24,8 +31,24 @@ void ACharacterAI::BeginPlay()
 
     // sets the ai speed
     GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
-}
 
+    // Start Behavior Tree
+    if (BehaviorTreeAsset)
+    {
+        if (BehaviorTreeAsset->BlackboardAsset)
+        {
+            BlackboardComponent->InitializeBlackboard(*BehaviorTreeAsset->BlackboardAsset);
+        }
+
+        // Set TargetPlayer in blackboard
+        if (BlackboardComponent && TargetPlayer)
+        {
+            BlackboardComponent->SetValueAsObject("TargetPlayer", TargetPlayer);
+        }
+
+        BehaviorTreeComponent->StartTree(*BehaviorTreeAsset);
+    }
+}
 
 void ACharacterAI::Tick(float DeltaTime)
 {
@@ -36,18 +59,17 @@ void ACharacterAI::Tick(float DeltaTime)
         MoveTowardsPlayer(TargetPlayer);
 
         float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
-        // attack range
-        if (Distance < 100.f) 
+        if (Distance < 100.f)
         {
             Attack();
         }
-        if (Distance < 550.f) 
+        if (Distance < 550.f)
         {
-			GetCharacterMovement()->MaxWalkSpeed = 250.f; // slow down when close to player
+            GetCharacterMovement()->MaxWalkSpeed = 250.f; // slow down when close to player
         }
-        else 
+        else
         {
-			GetCharacterMovement()->MaxWalkSpeed = 400.f; // normal speed
+            GetCharacterMovement()->MaxWalkSpeed = MoveSpeed; // normal speed
         }
     }
 }
@@ -56,11 +78,9 @@ void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
 {
     if (!PlayerActor) return;
 
-    // move towards player
     FVector Direction = (PlayerActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
     AddMovementInput(Direction, 1.0f);
 
-	// look at player
     FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), PlayerActor->GetActorLocation());
     SetActorRotation(FRotator(0.f, LookAtRotation.Yaw, 0.f));
 }
@@ -73,6 +93,7 @@ void ACharacterAI::Attack()
         GetCharacterMovement()->MaxWalkSpeed = 100.0f;
     }
 }
+
 void ACharacterAI::Block()
 {
     if (BlockMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(BlockMontage))
