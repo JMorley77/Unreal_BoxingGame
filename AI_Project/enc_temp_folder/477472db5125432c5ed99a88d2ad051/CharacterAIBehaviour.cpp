@@ -4,7 +4,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "GameFramework/Actor.h"
-#include "Kismet/GameplayStatics.h" 
+#include "Kismet/GameplayStatics.h" //  ADD THIS
 
 ACharacterAIBehaviour::ACharacterAIBehaviour()
 {
@@ -24,7 +24,7 @@ void ACharacterAIBehaviour::OnPossess(APawn* InPawn)
         BlackboardComponent->InitializeBlackboard(*AICharacter->BehaviorTreeAsset->BlackboardAsset);
         BehaviorTreeComponent->StartTree(*AICharacter->BehaviorTreeAsset);
 
-        // Get the actual player pawn at runtime
+        // FIX: Get the actual player pawn at runtime
         APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
         if (PlayerPawn)
         {
@@ -40,7 +40,7 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     APawn* AIPawn = GetPawn();
     if (!AIPawn || !BlackboardComponent) return;
 
-    // always ensure target is valid
+    // Optional but robust: always ensure target is valid
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     if (PlayerPawn)
     {

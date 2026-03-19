@@ -16,6 +16,7 @@ public:
 
 protected:
     virtual void OnPossess(APawn* InPawn) override;
+    virtual void Tick(float DeltaSeconds) override;
 
     // Behavior Tree components
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
@@ -23,4 +24,7 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UBlackboardComponent* BlackboardComponent;
+
+    FName TargetPlayerKey = "TargetPlayer";
+    FName DistanceKey = "DistanceToPlayer";
 };
