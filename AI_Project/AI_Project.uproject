@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.5",
+	"EngineAssociation": "{DEB26425-405E-8B46-9260-83AF7A858FA0}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -9,7 +9,8 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"Engine"
+				"Engine",
+				"AIModule"
 			]
 		}
 	],
