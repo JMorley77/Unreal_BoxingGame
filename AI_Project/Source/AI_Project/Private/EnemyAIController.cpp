@@ -11,12 +11,5 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
     if (AICharacter && AICharacter->BehaviorTreeAsset)
     {
         RunBehaviorTree(AICharacter->BehaviorTreeAsset);
-
-        APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-
-        if (PlayerPawn)
-        {
-            GetBlackboardComponent()->SetValueAsObject("Target", PlayerPawn);
-        }
     }
 }

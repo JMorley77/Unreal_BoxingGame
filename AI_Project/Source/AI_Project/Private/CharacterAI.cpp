@@ -1,5 +1,7 @@
 #include "CharacterAI.h"
 #include "Animation/AnimInstance.h"
+#include "AIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 ACharacterAI::ACharacterAI()
@@ -13,15 +15,22 @@ void ACharacterAI::BeginPlay()
 {
     Super::BeginPlay();
 
-    // find player
     APawn* PlayerPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
 
     if (PlayerPawn)
     {
         TargetPlayer = PlayerPawn;
-    }
 
-    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+        AAIController* AIController = Cast<AAIController>(GetController());
+
+        if (AIController && AIController->GetBlackboardComponent())
+        {
+            AIController->GetBlackboardComponent()->SetValueAsObject(
+                TEXT("Target"),
+                PlayerPawn
+            );
+        }
+    }
 }
 
 void ACharacterAI::Attack()
