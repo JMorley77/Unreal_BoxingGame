@@ -5,6 +5,8 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h" 
+#include "GameFramework/Character.h"
+#include "Character1.h"
 
 ACharacterAIBehaviour::ACharacterAIBehaviour()
 {
@@ -40,20 +42,25 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     APawn* AIPawn = GetPawn();
     if (!AIPawn || !BlackboardComponent) return;
 
-    // always ensure target is valid
+    // Get player ONCE
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (PlayerPawn)
-    {
-        BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
-    }
+    if (!PlayerPawn) return;
 
-    AActor* Target = Cast<AActor>(BlackboardComponent->GetValueAsObject(TargetPlayerKey));
-    if (!Target) return;
+    // Update target
+    BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
 
+    // Distance calculation
     float Distance = FVector::Dist(
         AIPawn->GetActorLocation(),
-        Target->GetActorLocation()
+        PlayerPawn->GetActorLocation()
     );
 
     BlackboardComponent->SetValueAsFloat(DistanceKey, Distance);
+
+    // Cast to your player class
+    ACharacter1* Player = Cast<ACharacter1>(PlayerPawn);
+    if (Player)
+    {
+        BlackboardComponent->SetValueAsBool("PlayerAttacking", Player->IsPunching);
+    }
 }

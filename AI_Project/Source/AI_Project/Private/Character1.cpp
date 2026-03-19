@@ -99,6 +99,7 @@ void ACharacter1::MoveRight(float Value)
 
 void ACharacter1::Attack()
 {
+	IsPunching = true;
 	if(PunchMontage)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -109,6 +110,11 @@ void ACharacter1::Attack()
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
 	}
+}
+
+void ACharacter1::EndAttack() 
+{
+	IsPunching = false;
 }
 
 void ACharacter1::Block()

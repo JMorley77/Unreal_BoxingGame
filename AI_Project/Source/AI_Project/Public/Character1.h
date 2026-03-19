@@ -36,11 +36,15 @@ protected:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void Attack();
+	void EndAttack();
 	void Block();
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	UAnimMontage* PunchMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	UAnimMontage* BlockMontage;
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	bool IsPunching = false;
 
 private:
 	// Tracks the nearest AI opponent
