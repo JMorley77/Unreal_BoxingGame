@@ -59,10 +59,6 @@ void ACharacterAI::Tick(float DeltaTime)
         MoveTowardsPlayer(TargetPlayer);
 
         float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
-        if (Distance < 100.f)
-        {
-            Attack();
-        }
         if (Distance < 550.f)
         {
             GetCharacterMovement()->MaxWalkSpeed = 250.f; // slow down when close to player

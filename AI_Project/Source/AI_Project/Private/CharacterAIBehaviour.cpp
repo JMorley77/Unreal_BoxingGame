@@ -62,5 +62,7 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     if (Player)
     {
         BlackboardComponent->SetValueAsBool("PlayerAttacking", Player->IsPunching);
+        BlackboardComponent->SetValueAsBool("PlayerBlocking", Player->IsBlocking);
     }
+
 }

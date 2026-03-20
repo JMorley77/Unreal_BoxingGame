@@ -109,10 +109,13 @@ void ACharacter1::Attack()
 			AnimInstance->Montage_Play(PunchMontage);
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
-		//IsPunching = false;
 	}
 }
 
+void ACharacter1::EndAttack() 
+{
+	IsPunching = false;
+}
 
 void ACharacter1::Block()
 {
@@ -126,6 +129,11 @@ void ACharacter1::Block()
 			AnimInstance->Montage_Play(BlockMontage);
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
-		//IsBlocking = false;
 	}
 }
+void ACharacter1::EndBlock()
+{
+	IsBlocking = false;
+}
+
+

@@ -36,7 +36,9 @@ protected:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void Attack();
+	void EndAttack();
 	void Block();
+	void EndBlock();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	UAnimMontage* PunchMontage;
