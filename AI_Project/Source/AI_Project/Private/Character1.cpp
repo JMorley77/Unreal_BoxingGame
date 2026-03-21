@@ -37,36 +37,38 @@ void ACharacter1::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Get the animation instance
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	bool bIsInAction = AnimInstance &&
 		(AnimInstance->Montage_IsPlaying(PunchMontage) || AnimInstance->Montage_IsPlaying(BlockMontage));
 
-	// Restore normal speed if not attacking/blocking
+	// Speed control (this can stay conditional)
 	if (!bIsInAction)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+	}
 
-		// Rotate toward AI if it exists
-		if (TargetAI && GetController())
+	//  ALWAYS rotate toward target
+	if (TargetAI && GetController())
+	{
+		FVector Direction = TargetAI->GetActorLocation() - GetActorLocation();
+		Direction.Z = 0.f;
+
+		if (!Direction.IsNearlyZero())
 		{
-			FVector Direction = TargetAI->GetActorLocation() - GetActorLocation();
-			Direction.Z = 0.f;
+			Direction.Normalize();
+			FRotator TargetRotation = Direction.Rotation();
 
-			if (!Direction.IsNearlyZero())
-			{
-				Direction.Normalize();
-				FRotator TargetRotation = Direction.Rotation();
+			FRotator NewRotation = FMath::RInterpTo(
+				GetControlRotation(),
+				TargetRotation,
+				DeltaTime,
+				RotationSpeed
+			);
 
-				// Smoothly interpolate controller rotation
-				FRotator NewRotation = FMath::RInterpTo(GetControlRotation(), TargetRotation, DeltaTime, RotationSpeed);
+			NewRotation.Pitch = 0.f;
+			NewRotation.Roll = 0.f;
 
-				// Keep only yaw
-				NewRotation.Pitch = 0.f;
-				NewRotation.Roll = 0.f;
-
-				GetController()->SetControlRotation(NewRotation);
-			}
+			GetController()->SetControlRotation(NewRotation);
 		}
 	}
 }
@@ -97,6 +99,9 @@ void ACharacter1::MoveRight(float Value)
 	AddMovementInput(RightDirection, Value);
 }
 
+//Attacking functionality
+#pragma region 
+
 void ACharacter1::Attack()
 {
 	if (PunchMontage)
@@ -118,6 +123,7 @@ void ACharacter1::Attack()
 		}
 	}
 }
+//Punch animation finished
 void ACharacter1::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage == PunchMontage)
@@ -126,8 +132,10 @@ void ACharacter1::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
 	}
 }
+#pragma endregion
 
-
+//Blocking functionality
+#pragma region 
 void ACharacter1::Block()
 {
 	if (BlockMontage)
@@ -149,6 +157,8 @@ void ACharacter1::Block()
 		}
 	}
 }
+
+//Block animation finished
 void ACharacter1::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage == BlockMontage)
@@ -156,3 +166,4 @@ void ACharacter1::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		IsBlocking = false;
 	}
 }
+#pragma endregion

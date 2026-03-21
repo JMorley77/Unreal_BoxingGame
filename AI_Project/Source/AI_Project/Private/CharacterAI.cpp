@@ -11,7 +11,7 @@ ACharacterAI::ACharacterAI()
     PrimaryActorTick.bCanEverTick = true;
 
     // set movement speed
-    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+    GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
 
     // create behavior tree components
     BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComponent"));
@@ -30,7 +30,7 @@ void ACharacterAI::BeginPlay()
     }
 
     // sets the ai speed
-    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+    GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
 
     // Start Behavior Tree
     if (BehaviorTreeAsset)
@@ -65,7 +65,7 @@ void ACharacterAI::Tick(float DeltaTime)
         }
         else
         {
-            GetCharacterMovement()->MaxWalkSpeed = MoveSpeed; // normal speed
+            GetCharacterMovement()->MaxWalkSpeed = moveSpeed; // normal speed
         }
     }
 }
