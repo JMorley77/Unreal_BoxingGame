@@ -99,33 +99,60 @@ void ACharacter1::MoveRight(float Value)
 
 void ACharacter1::Attack()
 {
-	IsPunching = true;
-	if(PunchMontage)
+	if (PunchMontage)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
-		if (!AnimInstance->Montage_IsPlaying(PunchMontage))
+		if (AnimInstance && !AnimInstance->Montage_IsPlaying(PunchMontage))
 		{
+			IsPunching = true;
+
 			AnimInstance->Montage_Play(PunchMontage);
+
+			// Bind end event
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &ACharacter1::OnAttackMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, PunchMontage);
+
+			GetCharacterMovement()->MaxWalkSpeed = 200.0f;
 		}
-		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
-		//IsPunching = false;
+	}
+}
+void ACharacter1::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == PunchMontage)
+	{
+		IsPunching = false;
+
 	}
 }
 
 
 void ACharacter1::Block()
 {
-	IsBlocking = true;
 	if (BlockMontage)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
-		if (!AnimInstance->Montage_IsPlaying(BlockMontage))
+		if (AnimInstance && !AnimInstance->Montage_IsPlaying(BlockMontage))
 		{
+			IsBlocking = true;
+
 			AnimInstance->Montage_Play(BlockMontage);
+
+			// Bind end event
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &ACharacter1::OnBlockMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, BlockMontage);
+
+			GetCharacterMovement()->MaxWalkSpeed = 200.0f;
 		}
-		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
-		//IsBlocking = false;
+	}
+}
+void ACharacter1::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == BlockMontage)
+	{
+		IsBlocking = false;
 	}
 }

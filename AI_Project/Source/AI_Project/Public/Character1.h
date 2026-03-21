@@ -37,6 +37,8 @@ protected:
 	void MoveRight(float Value);
 	void Attack();
 	void Block();
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	UAnimMontage* PunchMontage;
