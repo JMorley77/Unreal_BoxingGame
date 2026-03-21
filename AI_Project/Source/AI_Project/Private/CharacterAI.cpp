@@ -66,8 +66,10 @@ void ACharacterAI::Tick(float DeltaTime)
         else
         {
             GetCharacterMovement()->MaxWalkSpeed = moveSpeed; // normal speed
+			bInCombat = false; // not in combat when far from player
         }
     }
+    RegenerateStamina(DeltaTime);
 }
 
 void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
@@ -83,18 +85,45 @@ void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
 
 void ACharacterAI::Attack()
 {
-    if (PunchMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(PunchMontage))
+    if (!IsExhausted() && PunchMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(PunchMontage))
     {
         GetMesh()->GetAnimInstance()->Montage_Play(PunchMontage);
         GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+		ConsumeStamina(PunchCost);
+        bInCombat = true;
     }
 }
 
 void ACharacterAI::Block()
 {
-    if (BlockMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(BlockMontage))
+    if (!IsExhausted() && BlockMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(BlockMontage))
     {
         GetMesh()->GetAnimInstance()->Montage_Play(BlockMontage);
         GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+        ConsumeStamina(BlockCost);
+        bInCombat = true;
     }
+}
+
+
+
+void ACharacterAI::ConsumeStamina(float Amount)
+{
+    CurrentStamina = FMath::Clamp(CurrentStamina - Amount, 0.f, MaxStamina);
+}
+
+void ACharacterAI::RegenerateStamina(float DeltaTime)
+{
+    float RegenAmount = bInCombat ? CombatRegenRate : RegenRate;
+    CurrentStamina = FMath::Clamp(CurrentStamina + RegenAmount * DeltaTime, 0.f, MaxStamina);
+}
+
+bool ACharacterAI::IsExhausted() const
+{
+    return CurrentStamina <= ExhaustedStaminaThreshold;
+}
+
+bool ACharacterAI::IsLowStamina() const
+{
+    return CurrentStamina <= LowStaminaThreshold;
 }

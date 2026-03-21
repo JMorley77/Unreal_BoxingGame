@@ -77,6 +77,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float LowStaminaThreshold = 40.f;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+    bool bInCombat = false;
+
     //Costs
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
@@ -93,7 +96,7 @@ public:
     void ConsumeStamina(float Amount);
 
     UFUNCTION(BlueprintCallable, Category = "Stamina")
-    void RegenerateStamina(float DeltaTime, bool bInCombat);
+    void RegenerateStamina(float DeltaTime);
 
     UFUNCTION(BlueprintCallable, Category = "Stamina")
     bool IsExhausted() const;
