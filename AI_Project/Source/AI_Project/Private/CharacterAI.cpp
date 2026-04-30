@@ -64,7 +64,7 @@ void ACharacterAI::Tick(float DeltaTime)
         float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
         if (Distance < 550.f)
         {
-            GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 80.f : 250.f;  //retreat speed
+            GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 140.f : 250.f;  //retreat speed
         }
         else
         {
@@ -87,8 +87,12 @@ void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
 {
     if (!PlayerActor) return;
 
-    FVector Direction = (PlayerActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-    AddMovementInput(Direction, 1.0f);
+    FVector ToPlayer = (PlayerActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+    FVector Strafe = FVector::CrossProduct(ToPlayer, FVector::UpVector).GetSafeNormal();
+
+    // Slight sideways drift while approaching
+    FVector MoveDir = (ToPlayer * 0.85f + Strafe * 0.15f).GetSafeNormal();
+    AddMovementInput(MoveDir, 1.0f);
 
     FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), PlayerActor->GetActorLocation());
     SetActorRotation(FRotator(0.f, LookAtRotation.Yaw, 0.f));
@@ -134,9 +138,9 @@ void ACharacterAI::Retreat()
     FVector StrafeDirection = FVector::CrossProduct(AwayFromPlayer, FVector::UpVector).GetSafeNormal();
 
     // Mix backing away + strafing sideways
-    FVector RetreatDirection = (AwayFromPlayer * 0.3f + StrafeDirection * 0.7f).GetSafeNormal();
+    FVector RetreatDirection = (AwayFromPlayer * 0.6f + StrafeDirection * 0.4f).GetSafeNormal();
 
-    GetCharacterMovement()->MaxWalkSpeed = 80.f;
+    GetCharacterMovement()->MaxWalkSpeed = 140.f;
     GetCharacterMovement()->GroundFriction = 2.f;
     GetCharacterMovement()->BrakingDecelerationWalking = 200.f;
     AddMovementInput(RetreatDirection, 1.0f);
