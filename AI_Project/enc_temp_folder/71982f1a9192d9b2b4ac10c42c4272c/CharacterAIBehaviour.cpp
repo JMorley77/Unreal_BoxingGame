@@ -72,5 +72,6 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
         float StaminaRatio = AIChar->CurrentStamina / AIChar->MaxStamina;
 
         BlackboardComponent->SetValueAsBool("Exhausted", bExhausted);
+        BlackboardComponent->SetValueAsFloat("StaminaRatio", StaminaRatio);
     }
 }

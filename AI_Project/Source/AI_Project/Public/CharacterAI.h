@@ -29,6 +29,7 @@ public:
     // attack
     void Attack();
     void Block();
+	void Retreat();
 
     // movement speed
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -79,6 +80,9 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
     bool bInCombat = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+    bool bIsRetreating = false;
 
     //Costs
 

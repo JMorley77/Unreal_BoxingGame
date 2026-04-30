@@ -56,31 +56,20 @@ void ACharacterAI::Tick(float DeltaTime)
 
     if (TargetPlayer)
     {
-        if (!bIsRetreating) 
-        {
-            MoveTowardsPlayer(TargetPlayer);
-        }
+        MoveTowardsPlayer(TargetPlayer);
 
         float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
         if (Distance < 550.f)
         {
-            GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 80.f : 250.f;  //retreat speed
+            GetCharacterMovement()->MaxWalkSpeed = 250.f; // slow down when close to player
         }
         else
         {
-            GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
-            bInCombat = false;
+            GetCharacterMovement()->MaxWalkSpeed = moveSpeed; // normal speed
+			bInCombat = false; // not in combat when far from player
         }
     }
-
     RegenerateStamina(DeltaTime);
-
-    if (bIsRetreating && !IsExhausted())
-    {
-        bIsRetreating = false;
-        GetCharacterMovement()->GroundFriction = 8.f;
-        GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
-    }
 }
 
 void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
@@ -120,26 +109,20 @@ void ACharacterAI::Retreat()
 {
     if (!TargetPlayer) return;
 
+    // Disengage so stamina regens faster while retreating
     bInCombat = false;
     bIsRetreating = true;
 
-    // Face the player
+    // Face the player like an exhausted boxer keeping their guard up
     FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetPlayer->GetActorLocation());
     SetActorRotation(FRotator(0.f, LookAtRotation.Yaw, 0.f));
 
-    // Get direction away from player
+    // Move away slowly — exhausted shuffle
     FVector AwayFromPlayer = (GetActorLocation() - TargetPlayer->GetActorLocation()).GetSafeNormal();
-
-    // Get perpendicular (strafe) direction for circling
-    FVector StrafeDirection = FVector::CrossProduct(AwayFromPlayer, FVector::UpVector).GetSafeNormal();
-
-    // Mix backing away + strafing sideways
-    FVector RetreatDirection = (AwayFromPlayer * 0.3f + StrafeDirection * 0.7f).GetSafeNormal();
-
     GetCharacterMovement()->MaxWalkSpeed = 80.f;
     GetCharacterMovement()->GroundFriction = 2.f;
     GetCharacterMovement()->BrakingDecelerationWalking = 200.f;
-    AddMovementInput(RetreatDirection, 1.0f);
+    AddMovementInput(AwayFromPlayer, 0.5f);
 }
 
 
