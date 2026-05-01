@@ -181,7 +181,7 @@ void ACharacterAI::UpdateCombatStyle()
     {
         CurrentStyle = ECombatStyle::Defensive;
     }
-    else
+    else 
     {
         CurrentStyle = ECombatStyle::Counter;
     }
