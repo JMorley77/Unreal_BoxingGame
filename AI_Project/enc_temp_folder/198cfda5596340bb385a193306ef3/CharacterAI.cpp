@@ -6,19 +6,6 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
-enum class ECombatStyle
-{
-    Aggressive,
-    Defensive,
-    Counter,
-    Recovering
-};
-
-ECombatStyle CurrentStyle;
-
-float DecisionInterval = 2.0f;
-float LastDecisionTime = 0.0f;
-
 ACharacterAI::ACharacterAI()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -66,6 +53,7 @@ void ACharacterAI::BeginPlay()
 void ACharacterAI::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
     if (TargetPlayer)
     {
         if (!bIsRetreating) 
@@ -157,40 +145,6 @@ void ACharacterAI::Retreat()
     GetCharacterMovement()->BrakingDecelerationWalking = 200.f;
     AddMovementInput(RetreatDirection, 1.0f);
 }
-
-void ACharacterAI::UpdateCombatStyle() 
-{
-    float Time = GetWorld()->GetTimeSeconds();
-    if (Time - LastDecisionTime < DecisionInterval) return;
-
-    LastDecisionTime = Time;
-
-    float StaminaRatio = CurrentStamina / MaxStamina;
-    float Rand = FMath::FRand();
-
-    // Decision logic (this is the "brain")
-    if (StaminaRatio < 0.3f)
-    {
-        CurrentStyle = ECombatStyle::Recovering;
-    }
-    else if (Rand < 0.4f)
-    {
-        CurrentStyle = ECombatStyle::Aggressive;
-    }
-    else if (Rand < 0.7f)
-    {
-        CurrentStyle = ECombatStyle::Defensive;
-    }
-    else
-    {
-        CurrentStyle = ECombatStyle::Counter;
-    }
-}
-
-
-
-
-
 
 
 

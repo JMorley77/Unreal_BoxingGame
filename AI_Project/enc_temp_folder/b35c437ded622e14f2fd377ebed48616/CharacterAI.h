@@ -25,7 +25,7 @@ public:
 
     // Move to player 
     void MoveTowardsPlayer(AActor* PlayerActor);
-    void UpdateCombatStyle();
+
     // attack
     void Attack();
     void Block();
