@@ -69,8 +69,9 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     if (AIChar)
     {
         bool bExhausted = AIChar->IsExhausted();
-        float StaminaRatio = AIChar->CurrentStamina / AIChar->MaxStamina;
+        float Stamina = AIChar->CurrentStamina / AIChar->MaxStamina;
 
         BlackboardComponent->SetValueAsBool("Exhausted", bExhausted);
+        BlackboardComponent->SetValueAsFloat("LowStamina", Stamina);
     }
 }
