@@ -6,18 +6,7 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
-enum class ECombatStyle
-{
-    Aggressive,
-    Defensive,
-    Counter,
-    Recovering
-};
 
-ECombatStyle CurrentStyle;
-
-float DecisionInterval = 2.0f;
-float LastDecisionTime = 0.0f;
 
 ACharacterAI::ACharacterAI()
 {

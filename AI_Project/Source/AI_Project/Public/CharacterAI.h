@@ -7,6 +7,14 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "CharacterAI.generated.h"
 
+UENUM(BlueprintType)
+enum class ECombatStyle : uint8
+{
+    Aggressive     UMETA(DisplayName = "Aggressive"),
+    Defensive      UMETA(DisplayName = "Defensive"),
+    Counter        UMETA(DisplayName = "Counter"),
+    Recovering     UMETA(DisplayName = "Recovering")
+};
 class UAnimMontage;
 
 UCLASS()
@@ -109,7 +117,13 @@ public:
     bool IsLowStamina() const;
     #pragma endregion
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+    ECombatStyle CurrentStyle;
 
+    UPROPERTY(EditAnywhere, Category = "AI")
+    float DecisionInterval = 2.0f;
+
+    float LastDecisionTime = 0.0f;
 
 
     //Behaviour Trees

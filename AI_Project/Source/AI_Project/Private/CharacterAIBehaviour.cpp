@@ -74,4 +74,13 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
         BlackboardComponent->SetValueAsBool("Exhausted", bExhausted);
         BlackboardComponent->SetValueAsFloat("LowStamina", Stamina);
     }
+    if (AIChar)
+    {
+        AIChar->UpdateCombatStyle();
+
+        BlackboardComponent->SetValueAsEnum(
+            "CombatStyle",
+            (uint8)AIChar->CurrentStyle
+        );
+    }
 }
