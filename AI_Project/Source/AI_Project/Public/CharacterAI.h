@@ -125,6 +125,10 @@ public:
 
     float LastDecisionTime = 0.0f;
 
+    float PendingActionDelay = 0.f;
+
+    float ReactionTime = 0.f; 
+
 
     //Behaviour Trees
     #pragma region Behaviour Tree

@@ -82,6 +82,8 @@ void ACharacterAI::Tick(float DeltaTime)
         GetCharacterMovement()->GroundFriction = 8.f;
         GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
     }
+    PendingActionDelay -= DeltaTime;
+    if (PendingActionDelay > 0.f) return;
 }
 
 void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
@@ -156,7 +158,7 @@ void ACharacterAI::UpdateCombatStyle()
 
     float StaminaRatio = CurrentStamina / MaxStamina;
     float Rand = FMath::FRand();
-
+    ReactionTime = FMath::FRandRange(0.1f, 0.4f);
     // Decision logic (this is the "brain")
     if (StaminaRatio < 0.3f)
     {
