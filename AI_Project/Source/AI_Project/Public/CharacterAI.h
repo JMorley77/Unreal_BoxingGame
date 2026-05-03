@@ -10,11 +10,12 @@
 UENUM(BlueprintType)
 enum class ECombatStyle : uint8
 {
-    Aggressive     UMETA(DisplayName = "Aggressive"),
-    Defensive      UMETA(DisplayName = "Defensive"),
-    Counter        UMETA(DisplayName = "Counter"),
-    Recovering     UMETA(DisplayName = "Recovering")
+    Aggressive  UMETA(DisplayName = "Aggressive"),
+    Defensive   UMETA(DisplayName = "Defensive"),
+    Counter     UMETA(DisplayName = "Counter"),
+    Recovering  UMETA(DisplayName = "Recovering")
 };
+
 class UAnimMontage;
 
 UCLASS()
@@ -31,43 +32,45 @@ protected:
 public:
     virtual void Tick(float DeltaTime) override;
 
-    // Move to player 
     void MoveTowardsPlayer(AActor* PlayerActor);
     void UpdateCombatStyle();
-    // attack
     void Attack();
     void Block();
-	void Retreat();
+    void Retreat();
 
-    // movement speed
+    UFUNCTION()
+    void OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+    UFUNCTION()
+    void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+    // Movement
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
     float moveSpeed = 400.f;
 
-    // get the player reference
+    // Combat
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     AActor* TargetPlayer;
 
-    // punch animation
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     UAnimMontage* PunchMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     UAnimMontage* BlockMontage;
 
-    // combat stats
-    #pragma region Combat Stats
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    int32 health = 100;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int health = 100;
+    int32 damage = 20;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int damage = 20;
-    #pragma endregion
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+    bool bIsAttacking = false;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+    bool bIsBlocking = false;
 
-	//Stamina stats variables
-    #pragma region Stamina Stats Variables
-
+    // Stamina
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float MaxStamina = 100.f;
 
@@ -92,17 +95,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
     bool bIsRetreating = false;
 
-    //Costs
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float PunchCost = 10.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float BlockCost = 10.f;
-    #pragma endregion
-
-	//Stamina stats functions
-    #pragma region Stamina Stats Functions
 
     UFUNCTION(BlueprintCallable, Category = "Stamina")
     void ConsumeStamina(float Amount);
@@ -115,24 +112,26 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Stamina")
     bool IsLowStamina() const;
-    #pragma endregion
 
+    // AI Style
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-    ECombatStyle CurrentStyle;
+    ECombatStyle CurrentStyle = ECombatStyle::Aggressive;
 
     UPROPERTY(EditAnywhere, Category = "AI")
     float DecisionInterval = 2.0f;
 
-    float LastDecisionTime = 0.0f;
+    UPROPERTY(EditAnywhere, Category = "AI")
+    float RecoveryExitStaminaRatio = 0.5f;
 
+    UPROPERTY(EditAnywhere, Category = "AI")
+    float MaxRecoveryTime = 4.0f;
+
+    float LastDecisionTime = 0.f;
+    float RecoveryStartTime = 0.f;
+    float ReactionTime = 0.f;
     float PendingActionDelay = 0.f;
 
-    float ReactionTime = 0.f; 
-
-
-    //Behaviour Trees
-    #pragma region Behaviour Tree
-
+    // Behavior Tree
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     UBehaviorTree* BehaviorTreeAsset;
 
@@ -141,7 +140,4 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UBlackboardComponent* BlackboardComponent;
-    #pragma endregion
-
-
 };

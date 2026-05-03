@@ -6,16 +6,11 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
-
-
 ACharacterAI::ACharacterAI()
 {
     PrimaryActorTick.bCanEverTick = true;
-
-    // set movement speed
     GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
 
-    // create behavior tree components
     BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComponent"));
     BehaviorTreeComponent = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorTreeComponent"));
 }
@@ -24,26 +19,19 @@ void ACharacterAI::BeginPlay()
 {
     Super::BeginPlay();
 
-    // find player when the game begins
     APawn* PlayerPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
     if (PlayerPawn)
     {
         TargetPlayer = PlayerPawn;
     }
 
-    // sets the ai speed
     GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
 
-    // Start Behavior Tree
-    if (BehaviorTreeAsset)
+    if (BehaviorTreeAsset && BehaviorTreeAsset->BlackboardAsset)
     {
-        if (BehaviorTreeAsset->BlackboardAsset)
-        {
-            BlackboardComponent->InitializeBlackboard(*BehaviorTreeAsset->BlackboardAsset);
-        }
+        BlackboardComponent->InitializeBlackboard(*BehaviorTreeAsset->BlackboardAsset);
 
-        // Set TargetPlayer in blackboard
-        if (BlackboardComponent && TargetPlayer)
+        if (TargetPlayer)
         {
             BlackboardComponent->SetValueAsObject("TargetPlayer", TargetPlayer);
         }
@@ -55,35 +43,48 @@ void ACharacterAI::BeginPlay()
 void ACharacterAI::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    if (TargetPlayer)
-    {
-        if (!bIsRetreating) 
-        {
-            MoveTowardsPlayer(TargetPlayer);
-        }
 
-        float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
-        if (Distance < 550.f)
-        {
-            GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 140.f : 250.f;  //retreat speed
-        }
+    if (!TargetPlayer) return;
+
+    float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
+
+    // Only move if not mid-action
+    if (!bIsRetreating && !bIsAttacking && !bIsBlocking)
+    {
+        MoveTowardsPlayer(TargetPlayer);
+    }
+
+    // Speed management based on distance and state
+    if (Distance < 550.f)
+    {
+        if (bIsRetreating)
+            GetCharacterMovement()->MaxWalkSpeed = 140.f;
+        else if (bIsAttacking || bIsBlocking)
+            GetCharacterMovement()->MaxWalkSpeed = 100.f;
         else
-        {
-            GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
-            bInCombat = false;
-        }
+            GetCharacterMovement()->MaxWalkSpeed = 250.f;
+    }
+    else
+    {
+        GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
+        bInCombat = false;
     }
 
     RegenerateStamina(DeltaTime);
 
+    // Clear retreat when stamina has recovered and not exhausted
     if (bIsRetreating && !IsExhausted())
     {
         bIsRetreating = false;
         GetCharacterMovement()->GroundFriction = 8.f;
         GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
     }
-    PendingActionDelay -= DeltaTime;
-    if (PendingActionDelay > 0.f) return;
+
+    // Tick down any pending delay
+    if (PendingActionDelay > 0.f)
+    {
+        PendingActionDelay -= DeltaTime;
+    }
 }
 
 void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
@@ -92,34 +93,72 @@ void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
 
     FVector ToPlayer = (PlayerActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
     FVector Strafe = FVector::CrossProduct(ToPlayer, FVector::UpVector).GetSafeNormal();
-
-    // Slight sideways drift while approaching
     FVector MoveDir = (ToPlayer * 0.85f + Strafe * 0.15f).GetSafeNormal();
+
     AddMovementInput(MoveDir, 1.0f);
 
-    FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), PlayerActor->GetActorLocation());
-    SetActorRotation(FRotator(0.f, LookAtRotation.Yaw, 0.f));
+    FRotator LookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), PlayerActor->GetActorLocation());
+    SetActorRotation(FRotator(0.f, LookAt.Yaw, 0.f));
 }
 
 void ACharacterAI::Attack()
 {
-    if (!IsExhausted() && PunchMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(PunchMontage))
+    UAnimInstance* AnimInst = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+    if (!AnimInst || !PunchMontage) return;
+    if (IsExhausted()) return;
+    if (bIsAttacking) return;
+
+    // Force clear blocking state — if block montage is done or nearly done, allow attack
+    if (AnimInst->Montage_IsPlaying(BlockMontage))
     {
-        GetMesh()->GetAnimInstance()->Montage_Play(PunchMontage);
-        GetCharacterMovement()->MaxWalkSpeed = 100.0f;
-		ConsumeStamina(PunchCost);
-        bInCombat = true;
+        AnimInst->Montage_Stop(0.15f, BlockMontage); // blend out cleanly
+        bIsBlocking = false;
+    }
+
+    AnimInst->OnMontageEnded.RemoveDynamic(this, &ACharacterAI::OnAttackMontageEnded);
+    AnimInst->OnMontageEnded.AddDynamic(this, &ACharacterAI::OnAttackMontageEnded);
+
+    AnimInst->Montage_Play(PunchMontage);
+    bIsAttacking = true;
+    bIsBlocking = false; // ensure cleared
+    bInCombat = true;
+    ConsumeStamina(PunchCost);
+    GetCharacterMovement()->MaxWalkSpeed = 100.f;
+}
+
+void ACharacterAI::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (Montage == PunchMontage)
+    {
+        bIsAttacking = false;
+        // Restore movement speed after attack finishes
+        GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 140.f : moveSpeed;
     }
 }
 
 void ACharacterAI::Block()
 {
-    if (!IsExhausted() && BlockMontage && GetMesh() && GetMesh()->GetAnimInstance() && !GetMesh()->GetAnimInstance()->Montage_IsPlaying(BlockMontage))
+    UAnimInstance* AnimInst = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+    if (!AnimInst || !BlockMontage) return;
+    if (IsExhausted() || bIsAttacking || bIsBlocking) return;
+    if (AnimInst->Montage_IsPlaying(BlockMontage)) return;
+
+    AnimInst->OnMontageEnded.RemoveDynamic(this, &ACharacterAI::OnBlockMontageEnded);
+    AnimInst->OnMontageEnded.AddDynamic(this, &ACharacterAI::OnBlockMontageEnded);
+
+    AnimInst->Montage_Play(BlockMontage);
+    bIsBlocking = true;
+    bInCombat = true;
+    ConsumeStamina(BlockCost);
+    GetCharacterMovement()->MaxWalkSpeed = 100.f;
+}
+
+void ACharacterAI::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (Montage == BlockMontage)
     {
-        GetMesh()->GetAnimInstance()->Montage_Play(BlockMontage);
-        GetCharacterMovement()->MaxWalkSpeed = 100.0f;
-        ConsumeStamina(BlockCost);
-        bInCombat = true;
+        bIsBlocking = false;
+        GetCharacterMovement()->MaxWalkSpeed = bIsRetreating ? 140.f : moveSpeed;
     }
 }
 
@@ -130,60 +169,73 @@ void ACharacterAI::Retreat()
     bInCombat = false;
     bIsRetreating = true;
 
-    // Face the player
-    FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetPlayer->GetActorLocation());
-    SetActorRotation(FRotator(0.f, LookAtRotation.Yaw, 0.f));
+    FRotator LookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetPlayer->GetActorLocation());
+    SetActorRotation(FRotator(0.f, LookAt.Yaw, 0.f));
 
-    // Get direction away from player
-    FVector AwayFromPlayer = (GetActorLocation() - TargetPlayer->GetActorLocation()).GetSafeNormal();
-
-    // Get perpendicular (strafe) direction for circling
-    FVector StrafeDirection = FVector::CrossProduct(AwayFromPlayer, FVector::UpVector).GetSafeNormal();
-
-    // Mix backing away + strafing sideways
-    FVector RetreatDirection = (AwayFromPlayer * 0.6f + StrafeDirection * 0.4f).GetSafeNormal();
+    FVector Away = (GetActorLocation() - TargetPlayer->GetActorLocation()).GetSafeNormal();
+    FVector Strafe = FVector::CrossProduct(Away, FVector::UpVector).GetSafeNormal();
+    FVector RetreatDir = (Away * 0.6f + Strafe * 0.4f).GetSafeNormal();
 
     GetCharacterMovement()->MaxWalkSpeed = 140.f;
     GetCharacterMovement()->GroundFriction = 2.f;
     GetCharacterMovement()->BrakingDecelerationWalking = 200.f;
-    AddMovementInput(RetreatDirection, 1.0f);
+    AddMovementInput(RetreatDir, 1.0f);
 }
 
-void ACharacterAI::UpdateCombatStyle() 
+void ACharacterAI::UpdateCombatStyle()
 {
     float Time = GetWorld()->GetTimeSeconds();
-    if (Time - LastDecisionTime < DecisionInterval) return;
+    float StaminaRatio = CurrentStamina / MaxStamina;
+
+    // Handle Recovering exit conditions first
+    if (CurrentStyle == ECombatStyle::Recovering)
+    {
+        bool bRecovered = StaminaRatio >= RecoveryExitStaminaRatio;
+        bool bTimedOut = (Time - RecoveryStartTime) >= MaxRecoveryTime;
+        if (!bRecovered && !bTimedOut) return;
+        // Fall through to re-roll
+    }
+    else
+    {
+        if (Time - LastDecisionTime < DecisionInterval) return;
+    }
 
     LastDecisionTime = Time;
-
-    float StaminaRatio = CurrentStamina / MaxStamina;
-    float Rand = FMath::FRand();
     ReactionTime = FMath::FRandRange(0.1f, 0.4f);
-    // Decision logic (this is the "brain")
-    if (StaminaRatio < 0.3f)
+
+    // Enter Recovering only when truly exhausted
+    if (IsExhausted())
     {
+        if (CurrentStyle != ECombatStyle::Recovering)
+            RecoveryStartTime = Time;
+
         CurrentStyle = ECombatStyle::Recovering;
+        return;
     }
-    else if (Rand < 0.4f)
+
+    // Weighted style selection based on stamina
+    float Rand = FMath::FRand();
+
+    if (StaminaRatio < 0.45f)
     {
-        CurrentStyle = ECombatStyle::Aggressive;
+        // Low stamina — never aggressive
+        CurrentStyle = Rand < 0.55f ? ECombatStyle::Defensive : ECombatStyle::Counter;
     }
-    else if (Rand < 0.7f)
+    else if (StaminaRatio > 0.75f)
     {
-        CurrentStyle = ECombatStyle::Defensive;
+        // High stamina — can be aggressive
+        if (Rand < 0.5f)       CurrentStyle = ECombatStyle::Aggressive;
+        else if (Rand < 0.8f)  CurrentStyle = ECombatStyle::Defensive;
+        else                   CurrentStyle = ECombatStyle::Counter;
     }
-    else 
+    else
     {
-        CurrentStyle = ECombatStyle::Counter;
+        // Mid stamina — balanced
+        if (Rand < 0.3f)       CurrentStyle = ECombatStyle::Aggressive;
+        else if (Rand < 0.65f) CurrentStyle = ECombatStyle::Defensive;
+        else                   CurrentStyle = ECombatStyle::Counter;
     }
 }
-
-
-
-
-
-
-
 
 void ACharacterAI::ConsumeStamina(float Amount)
 {
@@ -192,8 +244,8 @@ void ACharacterAI::ConsumeStamina(float Amount)
 
 void ACharacterAI::RegenerateStamina(float DeltaTime)
 {
-    float RegenAmount = bInCombat ? CombatRegenRate : RegenRate;
-    CurrentStamina = FMath::Clamp(CurrentStamina + RegenAmount * DeltaTime, 0.f, MaxStamina);
+    float Rate = bInCombat ? CombatRegenRate : RegenRate;
+    CurrentStamina = FMath::Clamp(CurrentStamina + Rate * DeltaTime, 0.f, MaxStamina);
 }
 
 bool ACharacterAI::IsExhausted() const
