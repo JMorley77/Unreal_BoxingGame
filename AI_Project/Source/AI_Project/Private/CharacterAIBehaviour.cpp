@@ -1,12 +1,11 @@
 #include "CharacterAIBehaviour.h"
-#include "CharacterAI.h"  
+#include "CharacterAI.h"
+#include "Character1.h"
+
+#include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "BehaviorTree/BehaviorTree.h"
-#include "GameFramework/Actor.h"
-#include "Kismet/GameplayStatics.h" 
-#include "GameFramework/Character.h"
-#include "Character1.h"
+#include "Kismet/GameplayStatics.h"
 
 ACharacterAIBehaviour::ACharacterAIBehaviour()
 {
@@ -21,18 +20,24 @@ void ACharacterAIBehaviour::OnPossess(APawn* InPawn)
     Super::OnPossess(InPawn);
 
     ACharacterAI* AICharacter = Cast<ACharacterAI>(InPawn);
-    if (AICharacter && AICharacter->BehaviorTreeAsset)
+    if (!AICharacter || !AICharacter->BehaviorTreeAsset)
+    {
+        return;
+    }
+
+    if (AICharacter->BehaviorTreeAsset->BlackboardAsset)
     {
         BlackboardComponent->InitializeBlackboard(*AICharacter->BehaviorTreeAsset->BlackboardAsset);
-        BehaviorTreeComponent->StartTree(*AICharacter->BehaviorTreeAsset);
-
-        // Get the actual player pawn at runtime
-        APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-        if (PlayerPawn)
-        {
-            BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
-        }
     }
+
+    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if (PlayerPawn)
+    {
+        AICharacter->TargetPlayer = PlayerPawn;
+        BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
+    }
+
+    BehaviorTreeComponent->StartTree(*AICharacter->BehaviorTreeAsset);
 }
 
 void ACharacterAIBehaviour::Tick(float DeltaSeconds)
@@ -40,47 +45,77 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
 
     APawn* AIPawn = GetPawn();
-    if (!AIPawn || !BlackboardComponent) return;
-
-    // Get player ONCE
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (!PlayerPawn) return;
 
-    // Update target
-    BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
+    if (!AIPawn || !PlayerPawn || !BlackboardComponent)
+    {
+        return;
+    }
 
-    // Distance calculation
-    float Distance = FVector::Dist(
+    ACharacterAI* AICharacter = Cast<ACharacterAI>(AIPawn);
+    if (!AICharacter)
+    {
+        return;
+    }
+
+    ACharacter1* PlayerCharacter = Cast<ACharacter1>(PlayerPawn);
+
+    AICharacter->TargetPlayer = PlayerPawn;
+
+    const float DistanceToPlayer = FVector::Dist(
         AIPawn->GetActorLocation(),
         PlayerPawn->GetActorLocation()
     );
 
-    BlackboardComponent->SetValueAsFloat(DistanceKey, Distance);
+    BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
+    BlackboardComponent->SetValueAsFloat(DistanceKey, DistanceToPlayer);
 
-    // Cast to your player class
-    ACharacter1* Player = Cast<ACharacter1>(PlayerPawn);
-    if (Player)
+    if (PlayerCharacter)
     {
-        BlackboardComponent->SetValueAsBool("PlayerAttacking", Player->IsPunching);
-        BlackboardComponent->SetValueAsBool("PlayerBlocking", Player->IsBlocking);
+        const float Time = GetWorld()->GetTimeSeconds();
+
+        if (PlayerCharacter->IsPunching)
+        {
+            AICharacter->LastSeenPlayerAttackTime = Time;
+        }
+
+        if (PlayerCharacter->IsBlocking)
+        {
+            AICharacter->LastSeenPlayerBlockTime = Time;
+        }
+
+        const bool bRecentlySawPlayerAttack =
+            Time - AICharacter->LastSeenPlayerAttackTime <= AICharacter->PlayerActionMemoryTime;
+
+        const bool bRecentlySawPlayerBlock =
+            Time - AICharacter->LastSeenPlayerBlockTime <= AICharacter->PlayerActionMemoryTime;
+
+        AICharacter->bPlayerIsAttacking = bRecentlySawPlayerAttack;
+        AICharacter->bPlayerIsBlocking = bRecentlySawPlayerBlock;
+
+        BlackboardComponent->SetValueAsBool(TEXT("PlayerAttacking"), bRecentlySawPlayerAttack);
+        BlackboardComponent->SetValueAsBool(TEXT("PlayerBlocking"), bRecentlySawPlayerBlock);
+    }
+    else
+    {
+        AICharacter->bPlayerIsAttacking = false;
+        AICharacter->bPlayerIsBlocking = false;
+
+        BlackboardComponent->SetValueAsBool(TEXT("PlayerAttacking"), false);
+        BlackboardComponent->SetValueAsBool(TEXT("PlayerBlocking"), false);
     }
 
-    ACharacterAI* AIChar = Cast<ACharacterAI>(AIPawn);
-    if (AIChar)
-    {
-        bool bExhausted = AIChar->IsExhausted();
-        float Stamina = AIChar->CurrentStamina / AIChar->MaxStamina;
+    const float StaminaRatio = AICharacter->MaxStamina > 0.f
+        ? AICharacter->CurrentStamina / AICharacter->MaxStamina
+        : 0.f;
 
-        BlackboardComponent->SetValueAsBool("Exhausted", bExhausted);
-        BlackboardComponent->SetValueAsFloat("LowStamina", Stamina);
-    }
-    if (AIChar)
-    {
-        AIChar->UpdateCombatStyle();
+    BlackboardComponent->SetValueAsBool(TEXT("Exhausted"), AICharacter->IsExhausted());
+    BlackboardComponent->SetValueAsFloat(TEXT("StaminaRatio"), StaminaRatio);
 
-        BlackboardComponent->SetValueAsEnum(
-            "CombatStyle",
-            (uint8)AIChar->CurrentStyle
-        );
-    }
+    AICharacter->UpdateCombatStyle();
+
+    BlackboardComponent->SetValueAsEnum(
+        TEXT("CombatStyle"),
+        static_cast<uint8>(AICharacter->CurrentStyle)
+    );
 }

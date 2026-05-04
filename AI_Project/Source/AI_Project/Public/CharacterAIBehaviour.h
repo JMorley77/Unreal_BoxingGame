@@ -25,6 +25,12 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UBlackboardComponent* BlackboardComponent;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+    bool bPlayerIsAttacking = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+    bool bPlayerIsBlocking = false;
+
     FName TargetPlayerKey = "TargetPlayer";
     FName DistanceKey = "DistanceToPlayer";
 };

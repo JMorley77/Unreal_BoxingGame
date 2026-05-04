@@ -27,17 +27,6 @@ void ACharacterAI::BeginPlay()
 
     GetCharacterMovement()->MaxWalkSpeed = moveSpeed;
 
-    if (BehaviorTreeAsset && BehaviorTreeAsset->BlackboardAsset)
-    {
-        BlackboardComponent->InitializeBlackboard(*BehaviorTreeAsset->BlackboardAsset);
-
-        if (TargetPlayer)
-        {
-            BlackboardComponent->SetValueAsObject("TargetPlayer", TargetPlayer);
-        }
-
-        BehaviorTreeComponent->StartTree(*BehaviorTreeAsset);
-    }
 }
 
 void ACharacterAI::Tick(float DeltaTime)
@@ -49,7 +38,7 @@ void ACharacterAI::Tick(float DeltaTime)
     float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
 
     // Only move if not mid-action
-    if (!bIsRetreating && !bIsAttacking && !bIsBlocking)
+    if (!bIsRetreating && !bIsBlocking)
     {
         MoveTowardsPlayer(TargetPlayer);
     }
@@ -98,7 +87,17 @@ void ACharacterAI::MoveTowardsPlayer(AActor* PlayerActor)
     AddMovementInput(MoveDir, 1.0f);
 
     FRotator LookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), PlayerActor->GetActorLocation());
-    SetActorRotation(FRotator(0.f, LookAt.Yaw, 0.f));
+    FRotator CurrentRotation = GetActorRotation();
+    FRotator TargetRotation = FRotator(0.f, LookAt.Yaw, 0.f);
+
+    FRotator SmoothRotation = FMath::RInterpTo(
+        CurrentRotation,
+        TargetRotation,
+        GetWorld()->GetDeltaSeconds(),
+        8.f
+    );
+
+    SetActorRotation(SmoothRotation);
 }
 
 void ACharacterAI::Attack()
@@ -184,56 +183,85 @@ void ACharacterAI::Retreat()
 
 void ACharacterAI::UpdateCombatStyle()
 {
-    float Time = GetWorld()->GetTimeSeconds();
-    float StaminaRatio = CurrentStamina / MaxStamina;
-
-    // Handle Recovering exit conditions first
-    if (CurrentStyle == ECombatStyle::Recovering)
+    if (!TargetPlayer || !GetWorld())
     {
-        bool bRecovered = StaminaRatio >= RecoveryExitStaminaRatio;
-        bool bTimedOut = (Time - RecoveryStartTime) >= MaxRecoveryTime;
-        if (!bRecovered && !bTimedOut) return;
-        // Fall through to re-roll
-    }
-    else
-    {
-        if (Time - LastDecisionTime < DecisionInterval) return;
-    }
-
-    LastDecisionTime = Time;
-    ReactionTime = FMath::FRandRange(0.1f, 0.4f);
-
-    // Enter Recovering only when truly exhausted
-    if (IsExhausted())
-    {
-        if (CurrentStyle != ECombatStyle::Recovering)
-            RecoveryStartTime = Time;
-
-        CurrentStyle = ECombatStyle::Recovering;
         return;
     }
 
-    // Weighted style selection based on stamina
-    float Rand = FMath::FRand();
+    const float Time = GetWorld()->GetTimeSeconds();
 
-    if (StaminaRatio < 0.45f)
+    if (Time - LastDecisionTime < DecisionInterval)
     {
-        // Low stamina — never aggressive
-        CurrentStyle = Rand < 0.55f ? ECombatStyle::Defensive : ECombatStyle::Counter;
+        return;
     }
-    else if (StaminaRatio > 0.75f)
+
+    LastDecisionTime = Time;
+
+    const float StaminaRatio = CurrentStamina / MaxStamina;
+    const float HealthRatio = static_cast<float>(health) / 100.f;
+    const float DistanceToPlayer = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
+
+    float AggressiveScore = 0.f;
+    float DefensiveScore = 0.f;
+    float CounterScore = 0.f;
+    float RecoverScore = 0.f;
+
+    // Aggressive: best when healthy, energetic, and close enough.
+    AggressiveScore += StaminaRatio * 45.f;
+    AggressiveScore += HealthRatio * 20.f;
+
+    if (DistanceToPlayer < 180.f)
     {
-        // High stamina — can be aggressive
-        if (Rand < 0.5f)       CurrentStyle = ECombatStyle::Aggressive;
-        else if (Rand < 0.8f)  CurrentStyle = ECombatStyle::Defensive;
-        else                   CurrentStyle = ECombatStyle::Counter;
+        AggressiveScore += 25.f;
+    }
+
+    if (bPlayerIsBlocking)
+    {
+        AggressiveScore += 20.f;
+    }
+
+    if (bPlayerIsAttacking)
+    {
+        DefensiveScore += 90.f;
+        CounterScore += 110.f;
+        AggressiveScore -= 50.f;
     }
     else
     {
-        // Mid stamina — balanced
-        if (Rand < 0.3f)       CurrentStyle = ECombatStyle::Aggressive;
-        else if (Rand < 0.65f) CurrentStyle = ECombatStyle::Defensive;
-        else                   CurrentStyle = ECombatStyle::Counter;
+        DefensiveScore += 10.f;
+    }
+
+    // Defensive: useful when player is attacking or AI is under pressure.
+    DefensiveScore += bPlayerIsAttacking ? 60.f : 10.f;
+    DefensiveScore += IsLowStamina() ? 20.f : 0.f;
+
+    // Counter: best when the player attacks and AI has enough stamina.
+    CounterScore += bPlayerIsAttacking ? 70.f : 0.f;
+    CounterScore += StaminaRatio > 0.45f ? 25.f : -20.f;
+
+    // Recover: best when tired or hurt.
+    RecoverScore += IsExhausted() ? 100.f : 0.f;
+    RecoverScore += StaminaRatio < 0.35f ? 45.f : 0.f;
+    RecoverScore += HealthRatio < 0.35f ? 30.f : 0.f;
+
+    if (RecoverScore >= AggressiveScore &&
+        RecoverScore >= DefensiveScore &&
+        RecoverScore >= CounterScore)
+    {
+        CurrentStyle = ECombatStyle::Recovering;
+    }
+    else if (CounterScore >= AggressiveScore &&
+        CounterScore >= DefensiveScore)
+    {
+        CurrentStyle = ECombatStyle::Counter;
+    }
+    else if (DefensiveScore >= AggressiveScore)
+    {
+        CurrentStyle = ECombatStyle::Defensive;
+    }
+    else
+    {
+        CurrentStyle = ECombatStyle::Aggressive;
     }
 }
 

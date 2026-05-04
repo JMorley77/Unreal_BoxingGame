@@ -117,6 +117,13 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     ECombatStyle CurrentStyle = ECombatStyle::Aggressive;
 
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    bool bPlayerIsAttacking = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    bool bPlayerIsBlocking = false;
+
     UPROPERTY(EditAnywhere, Category = "AI")
     float DecisionInterval = 2.0f;
 
@@ -130,6 +137,23 @@ public:
     float RecoveryStartTime = 0.f;
     float ReactionTime = 0.f;
     float PendingActionDelay = 0.f;
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    float PlayerAttackMemoryTime = 0.8f;
+
+
+
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI Memory")
+    float LastSeenPlayerAttackTime = -999.f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI Memory")
+    float LastSeenPlayerBlockTime = -999.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Memory")
+    float PlayerActionMemoryTime = 0.8f;
+
 
     // Behavior Tree
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
