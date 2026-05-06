@@ -3,6 +3,7 @@
 
 #include "Character1.h"
 #include "Animation/AnimInstance.h"
+#include "DrawDebugHelpers.h"
 #include "CharacterAI.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include <Kismet/GameplayStatics.h>
@@ -107,14 +108,13 @@ void ACharacter1::Attack()
 	if (PunchMontage)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
 		if (AnimInstance && !AnimInstance->Montage_IsPlaying(PunchMontage))
 		{
+			bHasHitThisPunch = false;  // reset each new punch
 			IsPunching = true;
 
 			AnimInstance->Montage_Play(PunchMontage);
 
-			// Bind end event
 			FOnMontageEnded EndDelegate;
 			EndDelegate.BindUObject(this, &ACharacter1::OnAttackMontageEnded);
 			AnimInstance->Montage_SetEndDelegate(EndDelegate, PunchMontage);
@@ -167,3 +167,45 @@ void ACharacter1::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 }
 #pragma endregion
+
+
+
+void ACharacter1::PerformPunchTrace()
+{
+	if (bHasHitThisPunch) return;
+
+	USkeletalMeshComponent* SkelMesh = GetMesh();  // renamed from Mesh
+	if (!SkelMesh) return;
+
+	const FVector TraceStart = SkelMesh->GetBoneLocation(PunchBoneName);
+	const FVector TraceEnd = TraceStart + GetActorForwardVector() * PunchTraceLength;
+
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(PunchTraceRadius);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	TArray<FHitResult> Hits;
+	bool bHit = GetWorld()->SweepMultiByChannel(
+		Hits, TraceStart, TraceEnd,
+		FQuat::Identity, ECC_Pawn, Sphere, Params
+	);
+
+	DrawDebugSphere(GetWorld(), TraceStart, PunchTraceRadius, 8,
+		bHit ? FColor::Red : FColor::Green, false, 0.5f);
+
+	if (bHit)
+	{
+		for (const FHitResult& Hit : Hits)
+		{
+			ACharacterAI* HitAI = Cast<ACharacterAI>(Hit.GetActor());
+			if (HitAI)
+			{
+				HitAI->health = FMath::Clamp(HitAI->health - damage, 0, 100);
+				UE_LOG(LogTemp, Log, TEXT("Hit AI! Health remaining: %d"), HitAI->health);
+				bHasHitThisPunch = true;
+				break;
+			}
+		}
+	}
+}

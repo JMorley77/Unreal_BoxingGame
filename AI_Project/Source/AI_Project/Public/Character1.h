@@ -50,6 +50,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	bool IsBlocking = false;
 
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void PerformPunchTrace();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	FName PunchBoneName = TEXT("hand_r");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float PunchTraceRadius = 20.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	float PunchTraceLength = 40.f;
+
+private:
+	bool bHasHitThisPunch = false;
+
 private:
 	// Tracks the nearest AI opponent
 	ACharacterAI* TargetAI = nullptr;
