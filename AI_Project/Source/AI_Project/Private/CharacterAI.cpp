@@ -1,6 +1,8 @@
 #include "CharacterAI.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Animation/AnimInstance.h"
+#include "Character1.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
@@ -107,19 +109,19 @@ void ACharacterAI::Attack()
     if (IsExhausted()) return;
     if (bIsAttacking) return;
 
-    // Force clear blocking state — if block montage is done or nearly done, allow attack
     if (AnimInst->Montage_IsPlaying(BlockMontage))
     {
-        AnimInst->Montage_Stop(0.15f, BlockMontage); // blend out cleanly
+        AnimInst->Montage_Stop(0.15f, BlockMontage);
         bIsBlocking = false;
     }
 
     AnimInst->OnMontageEnded.RemoveDynamic(this, &ACharacterAI::OnAttackMontageEnded);
     AnimInst->OnMontageEnded.AddDynamic(this, &ACharacterAI::OnAttackMontageEnded);
 
+    bHasHitThisPunch = false;  // reset each new punch
     AnimInst->Montage_Play(PunchMontage);
     bIsAttacking = true;
-    bIsBlocking = false; // ensure cleared
+    bIsBlocking = false;
     bInCombat = true;
     ConsumeStamina(PunchCost);
     GetCharacterMovement()->MaxWalkSpeed = 100.f;
@@ -264,6 +266,49 @@ void ACharacterAI::UpdateCombatStyle()
         CurrentStyle = ECombatStyle::Aggressive;
     }
 }
+
+
+void ACharacterAI::PerformPunchTrace()
+{
+    if (bHasHitThisPunch) return;
+
+    USkeletalMeshComponent* SkelMesh = GetMesh();
+    if (!SkelMesh) return;
+
+    const FVector TraceStart = SkelMesh->GetBoneLocation(PunchBoneName);
+    const FVector TraceEnd = TraceStart + GetActorForwardVector() * PunchTraceLength;
+
+    FCollisionShape Sphere = FCollisionShape::MakeSphere(PunchTraceRadius);
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    TArray<FHitResult> Hits;
+    bool bHit = GetWorld()->SweepMultiByChannel(
+        Hits, TraceStart, TraceEnd,
+        FQuat::Identity, ECC_Pawn, Sphere, Params
+    );
+
+    DrawDebugSphere(GetWorld(), TraceStart, PunchTraceRadius, 8,
+        bHit ? FColor::Red : FColor::Green, false, 0.5f);
+
+    if (bHit)
+    {
+        for (const FHitResult& Hit : Hits)
+        {
+            ACharacter1* HitPlayer = Cast<ACharacter1>(Hit.GetActor());
+            if (HitPlayer)
+            {
+                HitPlayer->health = FMath::Clamp(HitPlayer->health - damage, 0, 100);
+                UE_LOG(LogTemp, Log, TEXT("AI hit player! Player health: %d"), HitPlayer->health);
+                bHasHitThisPunch = true;
+                break;
+            }
+        }
+    }
+}
+
+
 
 void ACharacterAI::ConsumeStamina(float Amount)
 {

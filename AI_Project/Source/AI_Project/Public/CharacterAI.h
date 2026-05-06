@@ -155,6 +155,7 @@ public:
     float PlayerActionMemoryTime = 0.8f;
 
 
+
     // Behavior Tree
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     UBehaviorTree* BehaviorTreeAsset;
@@ -164,4 +165,22 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UBlackboardComponent* BlackboardComponent;
+
+
+
+
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void PerformPunchTrace();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    FName PunchBoneName = TEXT("hand_r");
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float PunchTraceRadius = 20.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float PunchTraceLength = 40.f;
+
+private:
+    bool bHasHitThisPunch = false;
 };
