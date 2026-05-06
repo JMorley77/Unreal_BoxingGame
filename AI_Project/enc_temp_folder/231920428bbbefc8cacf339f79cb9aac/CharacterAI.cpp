@@ -303,7 +303,7 @@ void ACharacterAI::PerformPunchTrace()
 
                 if (HitPlayer->IsBlocking)
                 {
-                    FinalDamage = FMath::RoundToInt(damage * 0.1f);
+                    FinalDamage = FMath::RoundToInt(damage * 0.2f);
                     UE_LOG(LogTemp, Log, TEXT("Player blocked! Reduced damage: %d"), FinalDamage);
                 }
 

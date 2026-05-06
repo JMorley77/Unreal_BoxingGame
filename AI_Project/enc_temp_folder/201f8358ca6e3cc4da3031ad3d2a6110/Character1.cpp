@@ -205,7 +205,7 @@ void ACharacter1::PerformPunchTrace()
 
 				if (HitAI->bIsBlocking)
 				{
-					FinalDamage = FMath::RoundToInt(damage * 0.1f);
+					FinalDamage = FMath::RoundToInt(damage * 0.2f);
 					UE_LOG(LogTemp, Log, TEXT("AI blocked! Reduced damage: %d"), FinalDamage);
 				}
 
