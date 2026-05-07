@@ -45,7 +45,7 @@ void ACharacter1::Tick(float DeltaTime)
 	// Speed control (this can stay conditional)
 	if (!bIsInAction)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 400.f;
+		GetCharacterMovement()->MaxWalkSpeed = 600.f;
 	}
 
 	//  ALWAYS rotate toward target
