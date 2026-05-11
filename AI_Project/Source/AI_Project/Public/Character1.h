@@ -32,6 +32,8 @@ protected:
 	void OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 public:
+	// Sphere that gets activatedd from the punch bone each tick during the attack window;
+	// called via an anim notify so damage only registers at the right frame
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void PerformPunchTrace();
 
@@ -61,23 +63,26 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	int health = 100;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	int damage = 20;
 #pragma endregion
 
 #pragma region Trace Settings
 public:
+	// Bone the sphere originates from this maches the bone in skeleton
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	FName PunchBoneName = TEXT("hand_r");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float PunchTraceRadius = 20.f;
-
+	// How far forward from the bone the trace extends
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float PunchTraceLength = 40.f;
 #pragma endregion
 
 
 private:
+	// Prevents the same punch swing from registering multiple hits;
 	bool bHasHitThisPunch = false;
 
 	// Tracks the nearest AI opponent
