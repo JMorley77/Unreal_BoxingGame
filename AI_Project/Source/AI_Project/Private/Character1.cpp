@@ -33,7 +33,7 @@ void ACharacter1::BeginPlay()
 }
 
 
-// Called every frame
+#pragma region Tick
 void ACharacter1::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -73,9 +73,10 @@ void ACharacter1::Tick(float DeltaTime)
 		}
 	}
 }
+#pragma endregion 
 
 
-// Called to bind functionality to input
+#pragma region Input
 void ACharacter1::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -99,9 +100,10 @@ void ACharacter1::MoveRight(float Value)
 	FVector RightDirection = GetActorRightVector();
 	AddMovementInput(RightDirection, Value);
 }
+#pragma endregion
 
-//Attacking functionality
-#pragma region 
+
+#pragma region Attacking
 
 void ACharacter1::Attack()
 {
@@ -134,8 +136,8 @@ void ACharacter1::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 }
 #pragma endregion
 
-//Blocking functionality
-#pragma region 
+
+#pragma region Blocking
 void ACharacter1::Block()
 {
 	if (BlockMontage)
@@ -169,7 +171,7 @@ void ACharacter1::OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 #pragma endregion
 
 
-
+#pragma region Trace Settings
 void ACharacter1::PerformPunchTrace()
 {
 	if (bHasHitThisPunch) return;
@@ -217,3 +219,6 @@ void ACharacter1::PerformPunchTrace()
 		}
 	}
 }
+#pragma endregion
+
+
