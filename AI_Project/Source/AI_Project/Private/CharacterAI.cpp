@@ -250,7 +250,7 @@ void ACharacterAI::UpdateCombatStyle()
     // Each style accumulates a score and the highest score wins 
     // adjust these values to change AI personality:
     float AggressiveScore = 0.f;
-    float DefensiveScore = 0.f;
+    float DefensiveScore = 10.f; // quick fix to simulate more defenisve behaviour for submision - should be 0
     float CounterScore = 0.f;
     float RecoverScore = 0.f;
 
