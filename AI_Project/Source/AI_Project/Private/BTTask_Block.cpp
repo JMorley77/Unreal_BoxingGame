@@ -15,7 +15,7 @@ EBTNodeResult::Type UBTTask_Block::ExecuteTask(UBehaviorTreeComponent& OwnerComp
     ACharacterAI* MyPawn = Cast<ACharacterAI>(MyController->GetPawn());
     if (!MyPawn) return EBTNodeResult::Failed;
 
-    MyPawn->Block();
+	MyPawn->Block();//calls the block function
 
     return EBTNodeResult::Succeeded;
 }

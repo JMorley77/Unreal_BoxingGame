@@ -15,6 +15,7 @@ ACharacterAIBehaviour::ACharacterAIBehaviour()
     BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComponent"));
 }
 
+#pragma region Possession
 void ACharacterAIBehaviour::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
@@ -29,7 +30,7 @@ void ACharacterAIBehaviour::OnPossess(APawn* InPawn)
     {
         BlackboardComponent->InitializeBlackboard(*AICharacter->BehaviorTreeAsset->BlackboardAsset);
     }
-
+    //cache the player refernece on the ai and in the blackboard so the tree can use it
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     if (PlayerPawn)
     {
@@ -39,7 +40,10 @@ void ACharacterAIBehaviour::OnPossess(APawn* InPawn)
 
     BehaviorTreeComponent->StartTree(*AICharacter->BehaviorTreeAsset);
 }
+#pragma endregion
 
+
+#pragma region Tick Perception
 void ACharacterAIBehaviour::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -59,21 +63,21 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     }
 
     ACharacter1* PlayerCharacter = Cast<ACharacter1>(PlayerPawn);
-
+    // update target reference 
     AICharacter->TargetPlayer = PlayerPawn;
 
     const float DistanceToPlayer = FVector::Dist(
         AIPawn->GetActorLocation(),
         PlayerPawn->GetActorLocation()
     );
-
+    // update data to blackbaord every tick 
     BlackboardComponent->SetValueAsObject(TargetPlayerKey, PlayerPawn);
     BlackboardComponent->SetValueAsFloat(DistanceKey, DistanceToPlayer);
 
     if (PlayerCharacter)
     {
         const float Time = GetWorld()->GetTimeSeconds();
-
+        //strore the last time the AI saw the player do each action
         if (PlayerCharacter->IsPunching)
         {
             AICharacter->LastSeenPlayerAttackTime = Time;
@@ -104,7 +108,7 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
         BlackboardComponent->SetValueAsBool(TEXT("PlayerAttacking"), false);
         BlackboardComponent->SetValueAsBool(TEXT("PlayerBlocking"), false);
     }
-
+    // guard against divison by 0
     const float StaminaRatio = AICharacter->MaxStamina > 0.f
         ? AICharacter->CurrentStamina / AICharacter->MaxStamina
         : 0.f;
@@ -113,9 +117,12 @@ void ACharacterAIBehaviour::Tick(float DeltaSeconds)
     BlackboardComponent->SetValueAsFloat(TEXT("StaminaRatio"), StaminaRatio);
 
     AICharacter->UpdateCombatStyle();
-
+    // UpdateCombatStyle is updated every tick by DecisionInterval
     BlackboardComponent->SetValueAsEnum(
         TEXT("CombatStyle"),
         static_cast<uint8>(AICharacter->CurrentStyle)
     );
 }
+#pragma endregion
+
+

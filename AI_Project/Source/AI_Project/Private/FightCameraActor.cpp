@@ -23,7 +23,7 @@ void AFightCameraActor::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Assign Fighter1 dynamically if not set
+    // Assign Fighter1 if not set
     if (!Fighter1)
     {
         if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
@@ -35,7 +35,7 @@ void AFightCameraActor::BeginPlay()
         }
     }
 
-    // Assign Fighter2 dynamically if not set
+    // Assign Fighter2 if not set
     if (!Fighter2)
     {
         TArray<AActor*> Pawns;
@@ -64,13 +64,13 @@ void AFightCameraActor::Tick(float DeltaTime)
 
     if (!Fighter1 || !Fighter2) return;
 
-    // 1. Compute midpoint between fighters
+    //midpoint between fighters
     FVector Midpoint = (Fighter1->GetActorLocation() + Fighter2->GetActorLocation()) / 2;
 
-    // 2. Compute direction from Fighter1 to Fighter2
+    //direction from Fighter1 to Fighter2
     FVector Direction = (Fighter2->GetActorLocation() - Fighter1->GetActorLocation()).GetSafeNormal();
 
-    // 3. Compute camera offsets
+    //camera offsets
     FVector BackOffset = -Direction * BackOffsetDistance;          // behind fighters
     FVector RightVector = FVector::CrossProduct(Direction, FVector::UpVector).GetSafeNormal();
     FVector SideOffset = RightVector * SideOffsetDistance;         // slightly to side
@@ -78,16 +78,16 @@ void AFightCameraActor::Tick(float DeltaTime)
 
     FVector TargetLocation = Midpoint + BackOffset + SideOffset + UpOffset;
 
-    // 4. Smoothly move camera
+    //smoothly move camera
     FVector NewLocation = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaTime, PositionInterpSpeed);
     SetActorLocation(NewLocation);
 
-    // 5. Adjust SpringArm length dynamically based on fighter distance
+    //adjust SpringArm length based on fighter distance
     float Distance = FVector::Dist(Fighter1->GetActorLocation(), Fighter2->GetActorLocation());
     float TargetArmLength = FMath::Clamp(Distance, MinDistance, MaxDistance);
     SpringArm->TargetArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, TargetArmLength, DeltaTime, PositionInterpSpeed);
 
-    // 6. Smoothly rotate camera towards the midpoint with slight bias
+    //smoothly rotate camera towards the midpoint
     FVector LookTarget = Midpoint + UpOffset * 0.5f; // look slightly above midpoint
     FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), LookTarget);
     TargetRotation.Pitch += DefaultPitch;
