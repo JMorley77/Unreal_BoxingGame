@@ -7,6 +7,10 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "CharacterAI.generated.h"
 
+
+class UAnimMontage;
+#pragma region Decision Enum
+//decides what decision branch UpdateCombatStyle() will pick
 UENUM(BlueprintType)
 enum class ECombatStyle : uint8
 {
@@ -15,8 +19,7 @@ enum class ECombatStyle : uint8
     Counter     UMETA(DisplayName = "Counter"),
     Recovering  UMETA(DisplayName = "Recovering")
 };
-
-class UAnimMontage;
+#pragma endregion
 
 UCLASS()
 class AI_PROJECT_API ACharacterAI : public ACharacter
@@ -32,45 +35,82 @@ protected:
 public:
     virtual void Tick(float DeltaTime) override;
 
+
+#pragma region Combat Actions
     void MoveTowardsPlayer(AActor* PlayerActor);
-    void UpdateCombatStyle();
     void Attack();
     void Block();
     void Retreat();
+
+    void UpdateCombatStyle();
 
     UFUNCTION()
     void OnBlockMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
     UFUNCTION()
     void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+    // called via an anim notify so damage only registers at the right frame
+    // Sphere that gets activated from the punch bone each tick during the attack window;
 
-    // Movement
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-    float moveSpeed = 400.f;
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void PerformPunchTrace();
+#pragma endregion
 
-    // Combat
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    AActor* TargetPlayer;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    UAnimMontage* PunchMontage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    UAnimMontage* BlockMontage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int32 health = 100;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    int32 damage = 20;
-
+#pragma region States
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
     bool bIsAttacking = false;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
     bool bIsBlocking = false;
 
-    // Stamina
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    bool bPlayerIsAttacking = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    bool bPlayerIsBlocking = false;
+
+private:
+    // Prevents the same punch swing from registering multiple hits; 
+    bool bHasHitThisPunch = false;
+#pragma endregion
+
+#pragma region Stats
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    int32 health = 100;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    int32 damage = 20;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+    float moveSpeed = 400.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    AActor* TargetPlayer;
+
+#pragma endregion
+
+#pragma region Montages
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    UAnimMontage* PunchMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    UAnimMontage* BlockMontage;
+#pragma endregion
+
+#pragma region Trace Settings
+    // Bone the sphere originates from this maches the bone in skeleton
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    FName PunchBoneName = TEXT("hand_r"); 
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float PunchTraceRadius = 20.f;
+    // How far forward from the bone the trace extends
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float PunchTraceLength = 40.f;
+#pragma endregion
+
+#pragma region Stamina
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float MaxStamina = 100.f;
 
@@ -112,17 +152,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Stamina")
     bool IsLowStamina() const;
+#pragma endregion
 
-    // AI Style
+#pragma region Decision Making
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     ECombatStyle CurrentStyle = ECombatStyle::Aggressive;
-
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-    bool bPlayerIsAttacking = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-    bool bPlayerIsBlocking = false;
 
     UPROPERTY(EditAnywhere, Category = "AI")
     float DecisionInterval = 2.0f;
@@ -137,13 +171,11 @@ public:
     float RecoveryStartTime = 0.f;
     float ReactionTime = 0.f;
     float PendingActionDelay = 0.f;
+#pragma endregion
 
-
+#pragma region Memory
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     float PlayerAttackMemoryTime = 0.8f;
-
-
-
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI Memory")
     float LastSeenPlayerAttackTime = -999.f;
@@ -153,10 +185,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Memory")
     float PlayerActionMemoryTime = 0.8f;
+#pragma endregion
 
-
-
-    // Behavior Tree
+#pragma region Behaviour Tree
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     UBehaviorTree* BehaviorTreeAsset;
 
@@ -165,22 +196,15 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UBlackboardComponent* BlackboardComponent;
+#pragma endregion
 
 
 
 
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    void PerformPunchTrace();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    FName PunchBoneName = TEXT("hand_r");
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    float PunchTraceRadius = 20.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-    float PunchTraceLength = 40.f;
 
-private:
-    bool bHasHitThisPunch = false;
+
+
 };
